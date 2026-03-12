@@ -1,0 +1,71 @@
+name: "Trivy Image Scan"
+description: "Pull a Docker image from ECR and scan it for vulnerabilities using Trivy"
+inputs:
+  ECR_USERNAME:
+    description: "AWS ECR registry URL (e.g. 123456789.dkr.ecr.us-west-2.amazonaws.com)"
+    required: true
+  ECR_REGION:
+    description: "AWS region for ECR"
+    required: false
+    default: "us-west-2"
+  REPO:
+    description: "Full GitHub repository (owner/name)"
+    required: true
+  IMAGE_TAG:
+    description: "Image tag to scan (e.g. pull-amd-abc123)"
+    required: true
+  SEVERITY:
+    description: "Comma-separated severity levels to check"
+    required: false
+    default: "CRITICAL,HIGH"
+  EXIT_CODE:
+    description: "Exit code when vulnerabilities are found (0 = don't fail, 1 = fail)"
+    required: false
+    default: "1"
+  SKIP_FILES:
+    description: "Comma-separated file paths to skip during scan"
+    required: false
+    default: "/usr/local/lib/node_modules/**"
+  IGNORE_UNFIXED:
+    description: "Ignore unfixed vulnerabilities (true/false)"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Login to ECR
+      shell: bash
+      run: |
+        aws ecr get-login-password --region ${{ inputs.ECR_REGION }} | \
+          docker login --username AWS --password-stdin "${{ inputs.ECR_USERNAME }}"
+
+    - name: Pull image
+      shell: bash
+      run: |
+        REPO_NAME="${{ inputs.REPO }}"
+        REPO_NAME="${REPO_NAME##*/}"
+        IMAGE="${{ inputs.ECR_USERNAME }}/${REPO_NAME}:${{ inputs.IMAGE_TAG }}"
+        echo "Pulling image: $IMAGE"
+        docker pull "$IMAGE"
+
+    - name: Scan image with Trivy
+      shell: bash
+      run: |
+        REPO_NAME="${{ inputs.REPO }}"
+        REPO_NAME="${REPO_NAME##*/}"
+        IMAGE="${{ inputs.ECR_USERNAME }}/${REPO_NAME}:${{ inputs.IMAGE_TAG }}"
+
+        TRIVY_ARGS="--severity ${{ inputs.SEVERITY }} --exit-code ${{ inputs.EXIT_CODE }}"
+
+        if [ "${{ inputs.IGNORE_UNFIXED }}" = "true" ]; then
+          TRIVY_ARGS="$TRIVY_ARGS --ignore-unfixed"
+        fi
+
+        if [ -n "${{ inputs.SKIP_FILES }}" ]; then
+          TRIVY_ARGS="$TRIVY_ARGS --skip-files \"${{ inputs.SKIP_FILES }}\""
+        fi
+
+        echo "Scanning image: $IMAGE"
+        echo "Trivy args: $TRIVY_ARGS"
+        eval trivy image $TRIVY_ARGS "$IMAGE"
