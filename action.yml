@@ -58,7 +58,7 @@ runs:
           TRIVY_ARGS="$TRIVY_ARGS --ignore-unfixed"
         fi
 
-        TRIVY_ARGS="$TRIVY_ARGS --skip-files /usr/local/lib/node_modules/**"
+        TRIVY_ARGS="$TRIVY_ARGS --skip-files \"/usr/local/lib/node_modules/**\""
 
         echo "Scanning image: $IMAGE"
         echo "Trivy args: $TRIVY_ARGS"
