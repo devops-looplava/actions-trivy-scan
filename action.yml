@@ -22,10 +22,6 @@ inputs:
     description: "Exit code when vulnerabilities are found (0 = don't fail, 1 = fail)"
     required: false
     default: "1"
-  SKIP_FILES:
-    description: "Comma-separated file paths to skip during scan"
-    required: false
-    default: "/usr/local/lib/node_modules/**"
   IGNORE_UNFIXED:
     description: "Ignore unfixed vulnerabilities (true/false)"
     required: false
@@ -62,9 +58,7 @@ runs:
           TRIVY_ARGS="$TRIVY_ARGS --ignore-unfixed"
         fi
 
-        if [ -n "${{ inputs.SKIP_FILES }}" ]; then
-          TRIVY_ARGS="$TRIVY_ARGS --skip-files \"${{ inputs.SKIP_FILES }}\""
-        fi
+        TRIVY_ARGS="$TRIVY_ARGS --skip-files /usr/local/lib/node_modules/**"
 
         echo "Scanning image: $IMAGE"
         echo "Trivy args: $TRIVY_ARGS"
